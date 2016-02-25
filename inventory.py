@@ -97,13 +97,10 @@ def audit_inventory(wks):
 			cellRow = int(cell.row)
 			cellCol = int(cell.col)
 			cellCol = cellCol + 1
-			print('****************************')
 			print('Current Item:')
 			print(values_list[0])
-			print('****************************')
 			print('Recorded Stock:')
 			print(values_list[1])
-			print('****************************')
 			print('Please enter current stock:')
 			Qty_to_update = int(raw_input())
 			current_Qty = Qty_to_update
