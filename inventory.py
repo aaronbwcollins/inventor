@@ -7,7 +7,7 @@ from oauth2client.client import SignedJwtAssertionCredentials
 
 
 print('Starting Up, please wait for promnt...')
-# For Testing purposes 
+# For Testing purposes
 #scan = ''
 
 exec_path = os.path.dirname(os.path.realpath(__file__))
@@ -110,7 +110,7 @@ def audit_inventory(wks):
 
 while True:
 	print('Please Scan barcode:')
-	scan = raw_input()	
+	scan = raw_input()
 
 	if scan == 'Add':
 		add_inventory(current_wks)
