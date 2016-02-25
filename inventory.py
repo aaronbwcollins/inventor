@@ -1,5 +1,6 @@
 #! python2
 
+import os
 import json
 import gspread
 from oauth2client.client import SignedJwtAssertionCredentials
@@ -9,8 +10,10 @@ print('Starting Up, please wait for promnt...')
 # For Testing purposes 
 #scan = ''
 
+exec_path = os.path.dirname(os.path.realpath(__file__))
 # Configuration
-json_key = json.load(open('inventory-06b3cba18fd9.json'))
+json_key = json.load(open("%s/inventory-06b3cba18fd9.json" % exec_path))
+
 
 # Variables (Do Not Edit!)
 scope = ['https://spreadsheets.google.com/feeds']
@@ -110,7 +113,7 @@ def audit_inventory(wks):
 
 while True:
 	print('Please Scan barcode:')
-	scan = raw_input()
+	scan = raw_input()	
 
 	if scan == 'Add':
 		add_inventory(current_wks)
