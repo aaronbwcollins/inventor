@@ -1,4 +1,4 @@
-#! python2
+#!/usr/bin/env python
 
 import os
 import json
@@ -35,16 +35,16 @@ current_wks = wks.worksheet(location)
 
 def normal_reduction(barcode, wks):
     # Reduces QTY by 1
-    Qty_to_update = -(int('1'))
+    qty_to_update = -(int('1'))
     try:
         cell = wks.find(barcode)
         cellRow = int(cell.row)
         cellCol = int(cell.col)
         values_list = wks.row_values(cellRow)
         cellCol = cellCol + 1
-        current_Qty = int(values_list[1]) + Qty_to_update
+        current_Qty = int(values_list[1]) + qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
-        print('Item successfully reduced by ' + str(-Qty_to_update))
+        print('Item successfully reduced by ' + str(-qty_to_update))
     except Exception:
         print('Barcode not found!')
 
@@ -56,40 +56,41 @@ def add_inventory(wks):
     try:
         cell = wks.find(barcode)
         print('Please Enter QTY.')
-        Qty_to_update = (int(raw_input()))
+        qty_to_update = (int(raw_input()))
         cellRow = int(cell.row)
         cellCol = int(cell.col)
         values_list = wks.row_values(cellRow)
         cellCol = cellCol + 1
-        current_Qty = int(values_list[1]) + Qty_to_update
+        current_Qty = int(values_list[1]) + qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
-        print('Item successfully increased by ' + str(Qty_to_update))
+        print('Item successfully increased by ' + str(qty_to_update))
     except Exception:
         print('Barcode not found! Resetting...')
 
 def subtract_inventory(wks):
     # Subtracts Inventory
-    print('*(Subtract Mode)*')
-    print('Please Scan Barcode:')
-    barcode = raw_input()
+    title = "*.title = Inventor - Subtract Mode\n"
+    text = "\ntxt.default = Subtract Mode"
+    barcode = barcode_scan(title)
     try:
         cell = wks.find(barcode)
         print('')
         print('Please Enter QTY.')
-        Qty_to_update = -(int(raw_input()))
+        # qty_Enter(text)
+        qty_to_update = -(int(raw_input()))
         cellRow = int(cell.row)
         cellCol = int(cell.col)
         values_list = wks.row_values(cellRow)
         cellCol = cellCol + 1
-        current_Qty = int(values_list[1]) + Qty_to_update
+        current_Qty = int(values_list[1]) + qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
-        print('Item successfully reduced by ' + str(-Qty_to_update))
+        print('Item successfully reduced by ' + str(-qty_to_update))
     except Exception:
         print('Barcode not found! Resetting...')
 
 def audit_inventory(wks):
     # Audits Inventory
-    for i in range(2,10):
+    for i in range(2,10): #TODO Change range to enumerate through each row.
         values_list = wks.row_values(i)
         if values_list[0] != '':
             print('Please wait for promnt...')
@@ -104,36 +105,62 @@ def audit_inventory(wks):
             print('Recorded Stock:')
             print(values_list[1])
             print('Please enter current stock:')
-            Qty_to_update = int(raw_input())
-            current_Qty = Qty_to_update
+            qty_to_update = int(raw_input())
+            current_Qty = qty_to_update
             wks.update_cell(cellRow, cellCol, current_Qty)
     print('Audit Complete')
 
-def barcode_scan():
+def barcode_scan(title, text):
     #
-    barcode_view = """
-    *.title = Inventor - Inventory Update
-    text.type = text
-    text.default = Please Scan a Barcode
-    text.height = 50
-    text.width = 256
+    barcode_view = title + """
+    txt.type = text
+    txt.height = 50
+    txt.width = 256
     barcode.type = textfield
     barcode.label = 
     barcode.width = 256
     cb.type = cancelbutton
 
     """
+    barcode_view += text
     result = PBridge.run(barcode_view)
     print(result)
-    if result["cb"] == "1":
+    if result[cb] == "1":
         logger("User Canceled")
         sys.exit(0)
     return result['barcode']
 
+# def qty_Enter(text):
+#     qty_view = """ 
+#     *.title = Inventor - Inventory Update
+#     txt.type = text
+#     txt.height = 50
+#     txt.width = 256
+#     qty.type = textfield
+#     qty.label =
+#     qty.width = 256
+#     cb.type = cancelbutton
+
+#     """
+#     qty_view += text
+#     result = PBridge.run(qty_view)
+#     print(result)
+#     return result['qty']
+
+# def confrimation(text):
+#     confirm_view = """
+#     *.title = Invetor - Invetory Update
+#     txt.type = text
+#     txt.height = 50
+#     txt.width = 256
+#     """
+
+
 def main_loop():
     while True:
-        print('Please Scan barcode:')
-        scan = barcode_scan()
+        title = "*.title = Inventor - Inventory Update"
+        text = "txt.default = Please Scan a Barcode"
+        scan = barcode_scan(title, text)
 
         if scan == 'Add':
             add_inventory(current_wks)

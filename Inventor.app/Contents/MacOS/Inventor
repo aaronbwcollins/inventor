@@ -52,11 +52,11 @@ def add_inventory(wks):
     # Adds Inventory
     print('*(Add Mode)*')   
     print('Please Scan Barcode:')
-    barcode = raw_input()
+    barcode = barcode_scan()
     try:
         cell = wks.find(barcode)
         print('Please Enter QTY.')
-        Qty_to_update = (int(raw_input()))
+        Qty_to_update = (int(qty_Enter()))
         cellRow = int(cell.row)
         cellCol = int(cell.col)
         values_list = wks.row_values(cellRow)
@@ -71,12 +71,13 @@ def subtract_inventory(wks):
     # Subtracts Inventory
     print('*(Subtract Mode)*')
     print('Please Scan Barcode:')
-    barcode = raw_input()
+    barcode = barcode_scan()
     try:
         cell = wks.find(barcode)
         print('')
         print('Please Enter QTY.')
-        Qty_to_update = -(int(raw_input()))
+        Qty_to_update = -(int(qty_Enter()))
+        print(Qty_to_update)
         cellRow = int(cell.row)
         cellCol = int(cell.col)
         values_list = wks.row_values(cellRow)
@@ -129,6 +130,34 @@ def barcode_scan():
         logger("User Canceled")
         sys.exit(0)
     return result['barcode']
+
+def qty_Enter():
+    qty_view = """ 
+    *.title = Inventor - Inventory Update
+    txt.type = text
+    txt.default = "Please Enter Quantity"
+    txt.height = 50
+    txt.width = 256
+    qty.type = textfield
+    qty.label =
+    qty.width = 256
+    cb.type = cancelbutton
+
+    """
+    result = PBridge.run(qty_view)
+    print(result)
+    if result["cb"] == "1":
+        logger("User Canceled")
+        sys.exit(0)
+    return result['qty']
+
+# def confrimation(text):
+#     confirm_view = """
+#     *.title = Invetor - Invetory Update
+#     txt.type = text
+#     txt.height = 50
+#     txt.width = 256
+#     """
 
 def main_loop():
     while True:
