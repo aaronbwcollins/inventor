@@ -45,6 +45,7 @@ def normal_reduction(barcode, wks):
         current_Qty = int(values_list[1]) + Qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
         print('Item successfully reduced by ' + str(-Qty_to_update))
+        confirmation(str(Qty_to_update))
     except Exception:
         print('Barcode not found!')
 
@@ -64,6 +65,7 @@ def add_inventory(wks):
         current_Qty = int(values_list[1]) + Qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
         print('Item successfully increased by ' + str(Qty_to_update))
+        confirmation(str(Qty_to_update))
     except Exception:
         print('Barcode not found! Resetting...')
 
@@ -85,6 +87,7 @@ def subtract_inventory(wks):
         current_Qty = int(values_list[1]) + Qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
         print('Item successfully reduced by ' + str(-Qty_to_update))
+        confirmation(str(Qty_to_update))
     except Exception:
         print('Barcode not found! Resetting...')
 
@@ -151,13 +154,22 @@ def qty_Enter():
         sys.exit(0)
     return result['qty']
 
-# def confrimation(text):
-#     confirm_view = """
-#     *.title = Invetor - Invetory Update
-#     txt.type = text
-#     txt.height = 50
-#     txt.width = 256
-#     """
+def confirmation(text):
+    confirm_view = """
+    *.title = Invetor - Confirmation
+    txt.type = text
+    txt.height = 50
+    txt.width = 256
+    """
+    confirm_view += "\ntxt.default = Inventory modified by %s" % text
+
+    confirm_view += """
+
+    """
+    result = PBridge.run(confirm_view)
+    if result["cb"] == "1":
+        logger("User Canceled")
+        sys.exit(0)
 
 def main_loop():
     while True:
