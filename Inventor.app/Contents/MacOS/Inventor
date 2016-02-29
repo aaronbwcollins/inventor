@@ -30,9 +30,6 @@ location = "Sheet1"
 current_wks = wks.worksheet(location)
 
 
-#TODO Read Barcode via Pashu
-#TODO Ask for QTY. via Pashu
-
 def normal_reduction(barcode, wks):
     # Reduces QTY by 1
     Qty_to_update = -(int('1'))
@@ -93,6 +90,7 @@ def subtract_inventory(wks):
 
 def audit_inventory(wks):
     # Audits Inventory
+    # TODO pashua screen for audit
     for i in range(2,10):
         values_list = wks.row_values(i)
         if values_list[0] != '':
