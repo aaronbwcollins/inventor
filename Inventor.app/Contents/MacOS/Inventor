@@ -25,7 +25,7 @@ gc = gspread.authorize(creds)
 wks = gc.open("Test Inventory")
 
 # Set Sheet Location
-location = "Sheet1"
+location = "450 SR"
 #TODO location via Pashu if user based
 current_wks = wks.worksheet(location)
 
@@ -42,15 +42,14 @@ def normal_reduction(barcode, wks):
         current_Qty = int(values_list[1]) + Qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
         print('Item successfully reduced by ' + str(-Qty_to_update))
-        confirmation(str(Qty_to_update))
+        confirmation("Reduced", barcode, str(-Qty_to_update))
     except Exception:
         print('Barcode not found!')
 
 def add_inventory(wks):
     # Adds Inventory
-    print('*(Add Mode)*')   
-    print('Please Scan Barcode:')
-    barcode = barcode_scan()
+    text = "*(Add Mode)*"
+    barcode = barcode_scan(text)
     try:
         cell = wks.find(barcode)
         print('Please Enter QTY.')
@@ -68,9 +67,8 @@ def add_inventory(wks):
 
 def subtract_inventory(wks):
     # Subtracts Inventory
-    print('*(Subtract Mode)*')
-    print('Please Scan Barcode:')
-    barcode = barcode_scan()
+    text = "*(Subtract Mode)*"
+    barcode = barcode_scan(text)
     try:
         cell = wks.find(barcode)
         Qty_to_update = -(int(qty_Enter("Reducing", barcode)))
@@ -109,12 +107,14 @@ def audit_inventory(wks):
             wks.update_cell(cellRow, cellCol, current_Qty)
     print('Audit Complete')
 
-def barcode_scan():
+def barcode_scan(text):
     #
     barcode_view = """
     *.title = Inventor - Inventory Update
     text.type = text
-    text.default = Please Scan a Barcode
+    """
+    barcode_view += "\ntext.default = %s Please Scan Barcode\n" % text
+    barcode_view += """
     text.height = 50
     text.width = 256
     barcode.type = textfield
@@ -172,7 +172,8 @@ def confirmation(fuction, barcode, text):
 def main_loop():
     while True:
         print('Please Scan barcode:')
-        scan = barcode_scan()
+        text = ""
+        scan = barcode_scan(text)
 
         if scan == 'Add':
             add_inventory(current_wks)
