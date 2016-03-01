@@ -54,7 +54,7 @@ def add_inventory(wks):
     try:
         cell = wks.find(barcode)
         print('Please Enter QTY.')
-        Qty_to_update = (int(qty_Enter()))
+        Qty_to_update = (int(qty_Enter("Increasing", barcode)))
         cellRow = int(cell.row)
         cellCol = int(cell.col)
         values_list = wks.row_values(cellRow)
@@ -62,7 +62,7 @@ def add_inventory(wks):
         current_Qty = int(values_list[1]) + Qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
         print('Item successfully increased by ' + str(Qty_to_update))
-        confirmation(str(Qty_to_update))
+        confirmation("Increased", barcode, str(Qty_to_update))
     except Exception:
         print('Barcode not found! Resetting...')
 
@@ -73,9 +73,7 @@ def subtract_inventory(wks):
     barcode = barcode_scan()
     try:
         cell = wks.find(barcode)
-        print('')
-        print('Please Enter QTY.')
-        Qty_to_update = -(int(qty_Enter()))
+        Qty_to_update = -(int(qty_Enter("Reducing", barcode)))
         print(Qty_to_update)
         cellRow = int(cell.row)
         cellCol = int(cell.col)
@@ -84,7 +82,7 @@ def subtract_inventory(wks):
         current_Qty = int(values_list[1]) + Qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
         print('Item successfully reduced by ' + str(-Qty_to_update))
-        confirmation(str(Qty_to_update))
+        confirmation("Reduced", barcode, str(-Qty_to_update))
     except Exception:
         print('Barcode not found! Resetting...')
 
@@ -126,17 +124,19 @@ def barcode_scan():
 
     """
     result = PBridge.run(barcode_view)
-    print(result)
     if result["cb"] == "1":
         logger("User Canceled")
         sys.exit(0)
     return result['barcode']
 
-def qty_Enter():
+def qty_Enter(function, text):
     qty_view = """ 
     *.title = Inventor - Inventory Update
     txt.type = text
-    txt.default = "Please Enter Quantity"
+    """
+    qty_view += "\ntxt.default = Enter Qty for %s %s" % (function, text)
+    qty_view += """
+
     txt.height = 50
     txt.width = 256
     qty.type = textfield
@@ -152,22 +152,22 @@ def qty_Enter():
         sys.exit(0)
     return result['qty']
 
-def confirmation(text):
+def confirmation(fuction, barcode, text):
     confirm_view = """
     *.title = Invetor - Confirmation
     txt.type = text
     txt.height = 50
     txt.width = 256
     """
-    confirm_view += "\ntxt.default = Inventory modified by %s" % text
+    confirm_view += "\ntxt.default = %s %s by %s" % (barcode, fuction, text)
 
     confirm_view += """
 
     """
     result = PBridge.run(confirm_view)
-    if result["cb"] == "1":
-        logger("User Canceled")
-        sys.exit(0)
+    # if result["cb"] == "1":
+    #     logger("User Canceled")
+    #     sys.exit(0)
 
 def main_loop():
     while True:
