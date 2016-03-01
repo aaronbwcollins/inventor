@@ -89,23 +89,20 @@ def audit_inventory(wks):
     # TODO pashua screen for audit
     for i in range(2,10):
         values_list = wks.row_values(i)
-        if values_list[0] != '':
-            print('Please wait for promnt...')
+        if values_list[0] != '':    
             barcode = values_list[0]
-            print('*(Audit Mode)*')
             cell = wks.find(barcode)
             cellRow = int(cell.row)
             cellCol = int(cell.col)
             cellCol = cellCol + 1
-            print('Current Item:')
-            print(values_list[0])
-            print('Recorded Stock:')
-            print(values_list[1])
-            print('Please enter current stock:')
-            Qty_to_update = int(raw_input())
+            current_item = str(values_list[0])
+            reported_stock = str(values_list[1])
+            Qty_to_update = audit(current_item, reported_stock)
+            print(Qty_to_update)
             current_Qty = Qty_to_update
             wks.update_cell(cellRow, cellCol, current_Qty)
-    print('Audit Complete')
+            confirmation_audit(current_item, str(int(reported_stock) - int(current_Qty)), str(current_Qty))
+    audit_complete()
 
 def barcode_scan(text):
     #
@@ -113,7 +110,7 @@ def barcode_scan(text):
     *.title = Inventor - Inventory Update
     text.type = text
     """
-    barcode_view += "\ntext.default = %s Please Scan Barcode\n" % text
+    barcode_view += "\ntext.default = %s[return]Please Scan Barcode\n" % text
     barcode_view += """
     text.height = 50
     text.width = 256
@@ -168,6 +165,56 @@ def confirmation(fuction, barcode, text):
     # if result["cb"] == "1":
     #     logger("User Canceled")
     #     sys.exit(0)
+
+def confirmation_audit(item, devation, qty):
+    confirm_view = """
+    *.title = Invetor - Confirmation
+    txt.type = text
+    txt.height = 50
+    txt.width = 256
+    """
+    confirm_view += "\ntxt.default = Stock devation for %s is %s[return]Stock now set at %s" % (item, devation, qty)
+
+    confirm_view += """
+
+    """
+    result = PBridge.run(confirm_view)
+    # if result["cb"] == "1":
+    #     logger("User Canceled")
+    #     sys.exit(0)
+
+def audit_complete():
+    confirm_view = """
+    *.title = Invetor - Confirmation
+    txt.type = text
+    txt.height = 50
+    txt.width = 256
+    txt.default = Audit Mode Complete!
+
+    """
+    result = PBridge.run(confirm_view)
+    # if result["cb"] == "1":
+    #     logger("User Canceled")
+    #     sys.exit(0)
+
+def audit(item, qty):
+    audit_view = """
+    *.title = Inventor - Audit Mode
+    txt.type = text
+    """
+    audit_view += "txt.default = *(Audit Mode)*[return]Reported Stock of %s is %s[return]Please enter Current Stock" % (item, qty)
+    audit_view += """
+    txt.height = 50
+    txt.height = 256
+    audit.type = textfield
+    audit.label =
+    audit.width = 256
+    cb.type = cancelbutton
+    """
+    result = PBridge.run(audit_view)
+    if result['cb'] == "1":
+        return sys.exit(0)
+    return result['audit']
 
 def main_loop():
     while True:
