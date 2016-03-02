@@ -22,12 +22,7 @@ scope = ['https://spreadsheets.google.com/feeds']
 creds = SignedJwtAssertionCredentials(
     json_key['client_email'], json_key['private_key'].encode(), scope)
 gc = gspread.authorize(creds)
-wks = gc.open("Test Inventory")
-
-# Set Sheet Location
-location = "450 SR"
-#TODO location via Pashu if user based
-current_wks = wks.worksheet(location)
+wks = gc.open("Zenefits Inventory")
 
 
 def normal_reduction(barcode, wks):
@@ -103,6 +98,23 @@ def audit_inventory(wks):
             wks.update_cell(cellRow, cellCol, current_Qty)
             confirmation_audit(current_item, str(int(reported_stock) - int(current_Qty)), str(current_Qty))
     audit_complete()
+
+def location_get():
+    location_view = """
+    *.title = Inventor - Location
+    text.type = text
+    text.default = Please Scan Location
+    text.height = 50
+    text.width = 256
+    loc.type = textfield
+    loc.label =
+    cb.type = cancelbutton
+    """
+    result = PBridge.run(location_view)
+    if result['cb'] == "1":
+        logger("User Canceled")
+        sys.exit(0)
+    return result['loc']
 
 def barcode_scan(text):
     #
@@ -233,6 +245,10 @@ def main_loop():
 
 def logger(message):
     syslog.syslog(syslog.LOG_ALERT, message)
+
+# Set Sheet Location
+location = location_get()
+current_wks = wks.worksheet(location)
 
 if __name__ == "__main__":
     logger("Starting Inventor")
