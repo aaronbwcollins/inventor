@@ -79,6 +79,34 @@ def subtract_inventory(wks):
     except Exception:
         print('Barcode not found! Resetting...')
 
+def move_inventory(wks):
+    # Move Inventory from one location to another
+    text = "*(Move Mode)*"
+    barcode = barcode_scan(text)
+    try:
+        cell = wks.find(barcode)
+        Qty_to_update = -(int(qty_Enter("Moving", barcode)))
+        cellRow = int(cell.row)
+        cellCol = int(cell.col)
+        values_list = wks.row_values(cellRow)
+        cellCol += 1
+        current_Qty = int(values_list[1]) + Qty_to_update
+        wks.update_cell(cellRow, cellCol, current_Qty)
+        # Add to new location
+        location_temp = location_get
+        temp_wks = wks.worksheet(location_temp)
+        cell = wks.find(barcode) #Check Call
+        qty_to_add = -Qty_to_update
+        cellRow = int(cell.row)
+        cellCol = int(cell.col)
+        values_list = wks.row_values(cellRow)
+        current_Qty = int(values_list[1]) + Qty_to_update
+        wks.update_cell(cellRow, cellCol, current_Qty)
+
+
+
+
+
 def audit_inventory(wks):
     # Audits Inventory
     # TODO pashua screen for audit
