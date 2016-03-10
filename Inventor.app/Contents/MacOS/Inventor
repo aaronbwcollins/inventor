@@ -40,6 +40,7 @@ def normal_reduction(barcode, wks):
         confirmation("Reduced", barcode, str(-Qty_to_update))
     except Exception:
         print('Barcode not found!')
+        not_found('Barcode not found!')
 
 def add_inventory(wks):
     # Adds Inventory
@@ -59,6 +60,7 @@ def add_inventory(wks):
         confirmation("Increased", barcode, str(Qty_to_update))
     except Exception:
         print('Barcode not found! Resetting...')
+        not_found('Barcode not found!')
 
 def subtract_inventory(wks):
     # Subtracts Inventory
@@ -78,6 +80,7 @@ def subtract_inventory(wks):
         confirmation("Reduced", barcode, str(-Qty_to_update))
     except Exception:
         print('Barcode not found! Resetting...')
+        not_found('Barcode not found!')
 
 def move_inventory(wks):
     # Move Inventory from one location to another
@@ -92,19 +95,24 @@ def move_inventory(wks):
         cellCol += 1
         current_Qty = int(values_list[1]) + Qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
-        # Add to new location
-        location_temp = location_get
-        temp_wks = wks.worksheet(location_temp)
-        cell = wks.find(barcode) #Check Call
-        qty_to_add = -Qty_to_update
-        cellRow = int(cell.row)
-        cellCol = int(cell.col)
-        values_list = wks.row_values(cellRow)
-        current_Qty = int(values_list[1]) + Qty_to_update
-        wks.update_cell(cellRow, cellCol, current_Qty)
-
-
-
+    except Exception:
+        print('Barcode not found! Resetting...')
+        not_found('Barcode not found!')
+    # Add to new location
+    try:
+        location_temp = location_get(text='Location Moving To?[return]')
+    except Exception:
+        not_found('Location not found!')
+    temp_wb = gc.open("Zenefits Inventory")
+    temp_wks = temp_wb.worksheet(location_temp)
+    cell = temp_wks.find(barcode)
+    qty_to_add = -Qty_to_update
+    cellRow = int(cell.row)
+    cellCol = int(cell.col)
+    cellCol += 1
+    values_list = temp_wks.row_values(cellRow)
+    current_Qty = int(values_list[1]) + qty_to_add
+    temp_wks.update_cell(cellRow, cellCol, current_Qty)
 
 
 def audit_inventory(wks):
@@ -127,17 +135,17 @@ def audit_inventory(wks):
             confirmation_audit(current_item, str(int(reported_stock) - int(current_Qty)), str(current_Qty))
     audit_complete()
 
-def location_get():
+def location_get(text=''):
     location_view = """
     *.title = Inventor - Location
     text.type = text
-    text.default = Please Scan Location
+    text.default = %sPlease Scan Location
     text.height = 50
     text.width = 256
     loc.type = textfield
     loc.label =
     cb.type = cancelbutton
-    """
+    """ % text
     result = PBridge.run(location_view)
     if result['cb'] == "1":
         logger("User Canceled")
@@ -245,7 +253,7 @@ def audit(item, qty):
     audit_view += "txt.default = *(Audit Mode)*[return]Reported Stock of %s is %s[return]Please enter Current Stock" % (item, qty)
     audit_view += """
     txt.height = 50
-    txt.height = 256
+    txt.width = 256
     audit.type = textfield
     audit.label =
     audit.width = 256
@@ -256,7 +264,22 @@ def audit(item, qty):
         return sys.exit(0)
     return result['audit']
 
+def not_found(text):
+    not_found_view = """
+    *.title = Invetor - Not Found!
+    txt.type = text
+    txt.height = 50
+    txt.width = 256
+    txt.default = %s
+    """ % text
+    PBridge.run(not_found_view)
+
 def main_loop():
+    try:
+        location = location_get()
+    except WorksheetNotFound:
+        not_found('Location not found!')
+    current_wks = wks.worksheet(location)
     while True:
         print('Please Scan barcode:')
         text = ""
@@ -268,6 +291,8 @@ def main_loop():
             subtract_inventory(current_wks)
         elif scan == 'Audit':
             audit_inventory(current_wks)
+        elif scan == 'Move':
+            move_inventory(current_wks)
         else:
             normal_reduction(scan, current_wks)
 
@@ -275,8 +300,7 @@ def logger(message):
     syslog.syslog(syslog.LOG_ALERT, message)
 
 # Set Sheet Location
-location = location_get()
-current_wks = wks.worksheet(location)
+
 
 if __name__ == "__main__":
     logger("Starting Inventor")
