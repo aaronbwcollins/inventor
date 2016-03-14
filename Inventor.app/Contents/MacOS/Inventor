@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+### Inventor.app
+### Written by Aaron B.W. Collins assistance and PBridge.py by Andrew Rose
+### 03/10/16
+### V.1.0
 
 import os
 import json
@@ -8,7 +12,7 @@ import PBridge
 import sys
 import syslog
 
-print('Starting Up, please wait for promnt...')
+print('Starting Up, please wait for prompt...')
 # For Testing purposes
 #scan = ''
 
@@ -23,6 +27,7 @@ creds = SignedJwtAssertionCredentials(
     json_key['client_email'], json_key['private_key'].encode(), scope)
 gc = gspread.authorize(creds)
 wks = gc.open("Zenefits Inventory")
+
 
 
 def normal_reduction(barcode, wks):
@@ -40,11 +45,12 @@ def normal_reduction(barcode, wks):
         confirmation("Reduced", barcode, str(-Qty_to_update))
     except Exception:
         print('Barcode not found!')
+        not_found()
 
 def add_inventory(wks):
     # Adds Inventory
     text = "*(Add Mode)*"
-    barcode = barcode_scan(text)
+    barcode = barcode_scan(mode=text)
     try:
         cell = wks.find(barcode)
         print('Please Enter QTY.')
@@ -59,11 +65,12 @@ def add_inventory(wks):
         confirmation("Increased", barcode, str(Qty_to_update))
     except Exception:
         print('Barcode not found! Resetting...')
+        not_found()
 
 def subtract_inventory(wks):
     # Subtracts Inventory
     text = "*(Subtract Mode)*"
-    barcode = barcode_scan(text)
+    barcode = barcode_scan(mode=text)
     try:
         cell = wks.find(barcode)
         Qty_to_update = -(int(qty_Enter("Reducing", barcode)))
@@ -78,11 +85,41 @@ def subtract_inventory(wks):
         confirmation("Reduced", barcode, str(-Qty_to_update))
     except Exception:
         print('Barcode not found! Resetting...')
+        not_found()
+
+def move_inventory(wks):
+    # Move Inventory from one location to another
+    text = "*(Move Mode)*"
+    barcode = barcode_scan(mode=text)
+    try:
+        cell = wks.find(barcode)
+        Qty_to_update = -(int(qty_Enter("Moving", barcode)))
+        cellRow = int(cell.row)
+        cellCol = int(cell.col)
+        values_list = wks.row_values(cellRow)
+        cellCol += 1
+        current_Qty = int(values_list[1]) + Qty_to_update
+        wks.update_cell(cellRow, cellCol, current_Qty)
+    except Exception:
+        print('Barcode not found! Resetting...')
+        not_found()
+    # Add to new location
+    location_temp = location_get(text='Location Moving To?[return]')
+    temp_wb = gc.open("Zenefits Inventory")
+    temp_wks = temp_wb.worksheet(location_temp)
+    cell = temp_wks.find(barcode)
+    qty_to_add = -Qty_to_update
+    cellRow = int(cell.row)
+    cellCol = int(cell.col)
+    cellCol += 1
+    values_list = temp_wks.row_values(cellRow)
+    current_Qty = int(values_list[1]) + qty_to_add
+    temp_wks.update_cell(cellRow, cellCol, current_Qty)
+    confirmation("Moved", barcode, str(qty_to_add), location=location_temp)
+
 
 def audit_inventory(wks):
-    # Audits Inventory
-    # TODO pashua screen for audit
-    for i in range(2,10):
+    for i in range(2,len(wks.get_all_values()) + 1):
         values_list = wks.row_values(i)
         if values_list[0] != '':    
             barcode = values_list[0]
@@ -99,31 +136,40 @@ def audit_inventory(wks):
             confirmation_audit(current_item, str(int(reported_stock) - int(current_Qty)), str(current_Qty))
     audit_complete()
 
-def location_get():
-    location_view = """
-    *.title = Inventor - Location
-    text.type = text
-    text.default = Please Scan Location
-    text.height = 50
-    text.width = 256
-    loc.type = textfield
-    loc.label =
-    cb.type = cancelbutton
-    """
-    result = PBridge.run(location_view)
-    if result['cb'] == "1":
-        logger("User Canceled")
-        sys.exit(0)
-    return result['loc']
+def location_get(text=''):
+    vaild_location = False
+    while not vaild_location:
+        location_view = """
+        *.title = Inventor - Location
+        text.type = text
+        text.default = %sPlease Scan Location
+        text.height = 50
+        text.width = 256
+        loc.type = textfield
+        loc.label =
+        cb.type = cancelbutton
+        """ % text
+        result = PBridge.run(location_view)
+        vaild_location = True
+        if result['cb'] == "1":
+            logger("User Canceled")
+            sys.exit(0)
+        try:
+            wks.worksheet(result['loc'])
+        except Exception:
+            not_found('Location not found!')
+            vaild_location = False
+        else:
+            return result['loc']
 
-def barcode_scan(text):
+
+
+def barcode_scan(mode=''):
     #
     barcode_view = """
     *.title = Inventor - Inventory Update
     text.type = text
-    """
-    barcode_view += "\ntext.default = %s[return]Please Scan Barcode\n" % text
-    barcode_view += """
+    text.default = %s[return]Please Scan Barcode
     text.height = 50
     text.width = 256
     barcode.type = textfield
@@ -131,7 +177,7 @@ def barcode_scan(text):
     barcode.width = 256
     cb.type = cancelbutton
 
-    """
+    """ % mode
     result = PBridge.run(barcode_view)
     if result["cb"] == "1":
         logger("User Canceled")
@@ -142,10 +188,7 @@ def qty_Enter(function, text):
     qty_view = """ 
     *.title = Inventor - Inventory Update
     txt.type = text
-    """
-    qty_view += "\ntxt.default = Enter Qty for %s %s" % (function, text)
-    qty_view += """
-
+    txt.default = Enter Qty for %s %s
     txt.height = 50
     txt.width = 256
     qty.type = textfield
@@ -153,7 +196,7 @@ def qty_Enter(function, text):
     qty.width = 256
     cb.type = cancelbutton
 
-    """
+    """ % (function, text)
     result = PBridge.run(qty_view)
     print(result)
     if result["cb"] == "1":
@@ -161,22 +204,15 @@ def qty_Enter(function, text):
         sys.exit(0)
     return result['qty']
 
-def confirmation(fuction, barcode, text):
+def confirmation(fuction, barcode, text, location=''):
     confirm_view = """
     *.title = Invetor - Confirmation
     txt.type = text
     txt.height = 50
     txt.width = 256
-    """
-    confirm_view += "\ntxt.default = %s %s by %s" % (barcode, fuction, text)
-
-    confirm_view += """
-
-    """
-    result = PBridge.run(confirm_view)
-    # if result["cb"] == "1":
-    #     logger("User Canceled")
-    #     sys.exit(0)
+    txt.default = %s %s by %s[return]%s
+    """ % (barcode, fuction, text, location)
+    PBridge.run(confirm_view)
 
 def confirmation_audit(item, devation, qty):
     confirm_view = """
@@ -184,17 +220,10 @@ def confirmation_audit(item, devation, qty):
     txt.type = text
     txt.height = 50
     txt.width = 256
-    """
-    confirm_view += "\ntxt.default = Stock devation for %s is %s[return]Stock now set at %s" % (item, devation, qty)
-
-    confirm_view += """
-
-    """
-    result = PBridge.run(confirm_view)
-    # if result["cb"] == "1":
-    #     logger("User Canceled")
-    #     sys.exit(0)
-
+    txt.default = Stock devation for %s is %s[return]Stock now set at %s
+    """ % (item, devation, qty)
+    PBridge.run(confirm_view)
+    
 def audit_complete():
     confirm_view = """
     *.title = Invetor - Confirmation
@@ -204,35 +233,41 @@ def audit_complete():
     txt.default = Audit Mode Complete!
 
     """
-    result = PBridge.run(confirm_view)
-    # if result["cb"] == "1":
-    #     logger("User Canceled")
-    #     sys.exit(0)
+    PBridge.run(confirm_view)
 
 def audit(item, qty):
     audit_view = """
     *.title = Inventor - Audit Mode
     txt.type = text
-    """
-    audit_view += "txt.default = *(Audit Mode)*[return]Reported Stock of %s is %s[return]Please enter Current Stock" % (item, qty)
-    audit_view += """
+    txt.default = *(Audit Mode)*[return]Reported Stock of %s is %s[return]Please enter Current Stock
     txt.height = 50
-    txt.height = 256
+    txt.width = 256
     audit.type = textfield
     audit.label =
     audit.width = 256
     cb.type = cancelbutton
-    """
+    """ % (item, qty)
     result = PBridge.run(audit_view)
     if result['cb'] == "1":
         return sys.exit(0)
     return result['audit']
 
+def not_found(text="Barcode not found!"):
+    not_found_view = """
+    *.title = Invetor - Not Found!
+    txt.type = text
+    txt.height = 50
+    txt.width = 256
+    txt.default = %s
+    """ % text
+    PBridge.run(not_found_view)
+
 def main_loop():
+    location = location_get()
+    current_wks = wks.worksheet(location)
     while True:
         print('Please Scan barcode:')
-        text = ""
-        scan = barcode_scan(text)
+        scan = barcode_scan()
 
         if scan == 'Add':
             add_inventory(current_wks)
@@ -240,15 +275,13 @@ def main_loop():
             subtract_inventory(current_wks)
         elif scan == 'Audit':
             audit_inventory(current_wks)
+        elif scan == 'Move':
+            move_inventory(current_wks)
         else:
             normal_reduction(scan, current_wks)
 
 def logger(message):
     syslog.syslog(syslog.LOG_ALERT, message)
-
-# Set Sheet Location
-location = location_get()
-current_wks = wks.worksheet(location)
 
 if __name__ == "__main__":
     logger("Starting Inventor")
