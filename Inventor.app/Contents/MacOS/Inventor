@@ -11,6 +11,7 @@ from oauth2client.client import SignedJwtAssertionCredentials
 import PBridge
 import sys
 import syslog
+import traceback
 
 print('Starting Up, please wait for prompt...')
 # For Testing purposes
@@ -25,10 +26,45 @@ syslog.openlog('Inventor')
 scope = ['https://spreadsheets.google.com/feeds']
 creds = SignedJwtAssertionCredentials(
     json_key['client_email'], json_key['private_key'].encode(), scope)
+
+def unknown_error(text="unknown_error"):
+    not_found_view = """
+    *.title = Inventor - Error!
+    txt.type = text
+    txt.height = 50
+    txt.width = 256
+    txt.default = %s
+    """ % text
+    PBridge.run(not_found_view)
+
+try:
+    gc = gspread.authorize(creds)
+except Exception:
+    unknown_error('Internet Down')
+
 gc = gspread.authorize(creds)
 wks = gc.open("Zenefits Inventory")
 
+def check_and_renew_auth():
+    try:
+        if creds.access_token_expired:
+            print('reauthing')
+            gc.login()
+        else:
+            print('All Good!')
+    except Exception, e:
+        traceback.print_exc()
+        unknown_error()
 
+    # try:
+    #     wks.cell(1,1)
+    # except gspread.exceptions.HTTPError, err:
+    #     print('ReAuthing')
+    #     gc = gspread.authorize(creds)
+    #     wks = gc.open("Zenefits Inventory")
+    #     current_wks = wks.worksheet(location)
+    # except Exception:
+    #     unknown_error()
 
 def normal_reduction(barcode, wks):
     # Reduces QTY by 1
@@ -43,9 +79,11 @@ def normal_reduction(barcode, wks):
         wks.update_cell(cellRow, cellCol, current_Qty)
         print('Item successfully reduced by ' + str(-Qty_to_update))
         confirmation("Reduced", barcode, str(-Qty_to_update))
-    except Exception:
+    except gspread.exceptions.CellNotFound:
         print('Barcode not found!')
         not_found()
+    except:
+        unknown_error()
 
 def add_inventory(wks):
     # Adds Inventory
@@ -63,9 +101,11 @@ def add_inventory(wks):
         wks.update_cell(cellRow, cellCol, current_Qty)
         print('Item successfully increased by ' + str(Qty_to_update))
         confirmation("Increased", barcode, str(Qty_to_update))
-    except Exception:
-        print('Barcode not found! Resetting...')
+    except gspread.exceptions.CellNotFound:
+        print('Barcode not found!')
         not_found()
+    except Exception:
+        unknown_error()
 
 def subtract_inventory(wks):
     # Subtracts Inventory
@@ -83,9 +123,11 @@ def subtract_inventory(wks):
         wks.update_cell(cellRow, cellCol, current_Qty)
         print('Item successfully reduced by ' + str(-Qty_to_update))
         confirmation("Reduced", barcode, str(-Qty_to_update))
-    except Exception:
-        print('Barcode not found! Resetting...')
+    except gspread.exceptions.CellNotFound:
+        print('Barcode not found!')
         not_found()
+    except Exception:
+        unknown_error()
 
 def move_inventory(wks):
     # Move Inventory from one location to another
@@ -100,9 +142,11 @@ def move_inventory(wks):
         cellCol += 1
         current_Qty = int(values_list[1]) + Qty_to_update
         wks.update_cell(cellRow, cellCol, current_Qty)
-    except Exception:
-        print('Barcode not found! Resetting...')
+    except gspread.exceptions.CellNotFound:
+        print('Barcode not found!')
         not_found()
+    except Exception:
+        unknown_error()
     # Add to new location
     location_temp = location_get(text='Location Moving To?[return]')
     temp_wb = gc.open("Zenefits Inventory")
@@ -268,6 +312,7 @@ def main_loop():
     while True:
         print('Please Scan barcode:')
         scan = barcode_scan()
+        check_and_renew_auth()
 
         if scan == 'Add':
             add_inventory(current_wks)
