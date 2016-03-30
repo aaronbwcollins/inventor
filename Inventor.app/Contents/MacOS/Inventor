@@ -180,31 +180,34 @@ def audit_inventory(wks):
             confirmation_audit(current_item, str(int(reported_stock) - int(current_Qty)), str(current_Qty))
     audit_complete()
 
-def location_get(text=''):
-    vaild_location = False
-    while not vaild_location:
-        location_view = """
-        *.title = Inventor - Location
-        text.type = text
-        text.default = %sPlease Scan Location
-        text.height = 50
-        text.width = 256
-        loc.type = textfield
-        loc.label =
-        cb.type = cancelbutton
-        """ % text
-        result = PBridge.run(location_view)
-        vaild_location = True
-        if result['cb'] == "1":
-            logger("User Canceled")
-            sys.exit(0)
-        try:
-            wks.worksheet(result['loc'])
-        except Exception:
-            not_found('Location not found!')
-            vaild_location = False
-        else:
-            return result['loc']
+def location_get(text='', location=''):
+    if location == '':
+        vaild_location = False
+        while not vaild_location:
+            location_view = """
+            *.title = Inventor - Location
+            text.type = text
+            text.default = %sPlease Scan Location
+            text.height = 50
+            text.width = 256
+            loc.type = textfield
+            loc.label =
+            cb.type = cancelbutton
+            """ % text
+            result = PBridge.run(location_view)
+            vaild_location = True
+            if result['cb'] == "1":
+                logger("User Canceled")
+                sys.exit(0)
+            try:
+                wks.worksheet(result['loc'])
+            except Exception:
+                not_found('Location not found!')
+                vaild_location = False
+            else:
+                return result['loc']
+    else:
+        return location
 
 
 
@@ -307,7 +310,8 @@ def not_found(text="Barcode not found!"):
     PBridge.run(not_found_view)
 
 def main_loop():
-    location = location_get()
+    set_location = ''
+    location = location_get('', location=set_location)
     current_wks = wks.worksheet(location)
     while True:
         print('Please Scan barcode:')
